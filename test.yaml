@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: demo-test-job
+  namespace: default
+spec:
+  template:
+    metadata:
+      name: demo-test-job
+    spec:
+      containers:
+      - name: demo-test-job
+        image: ubuntu
+        command: ["/bin/bash","-c"]
+        args: ["/app/entrypoint.sh"]
+        env:
+        - name: ADDRESS
+          value: "demo-nodeport-service.default.svc.cluster.local:11130/?Name=test"          
+        volumeMounts:
+        - name: script
+          mountPath: /app/entrypoint.sh
+          subPath: entrypoint.sh
+      volumes:
+      - name: script
+        configMap:
+          defaultMode: 477
+          name: demo-test-job-entrypoint
+      restartPolicy: Never
+  backoffLimit: 3
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: demo-test-job-entrypoint
+  namespace: default
+  labels:
+    app: demo-test-job
+data:
+  entrypoint.sh: |-
+    #!/bin/bash
+    apt-get update && apt-get install curl -y
+    curl $ADDRESS
+    echo ""
+    echo "exit_code:"$?
